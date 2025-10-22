@@ -27,10 +27,7 @@ export class StringsController {
     @HttpCode(HttpStatus.CREATED)
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
     create(@Body() createStringDto: CreateStringDto) {
-        // Validate that value is actually a string type
-        if (typeof createStringDto.value !== 'string') {
-            throw new BadRequestException('Invalid data type for "value" (must be string)');
-        }
+        // Let class-validator handle type and presence errors
         return this.stringsService.create(createStringDto);
     }
 
