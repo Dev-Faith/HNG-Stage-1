@@ -11,6 +11,7 @@ import {
     ValidationPipe,
     UsePipes,
     BadRequestException,
+    UnprocessableEntityException,
 } from '@nestjs/common';
 import { StringsService } from './strings.service';
 import { CreateStringDto } from './dto/create-string.dto';
@@ -24,10 +25,14 @@ export class StringsController {
      * POST /strings - Create/Analyze a new string
      */
     @Post()
-    @HttpCode(HttpStatus.CREATED)
-    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+    // @HttpCode(HttpStatus.CREATED)
+    // @UsePipes(new ValidationPipe({ transform: false, whitelist: true }))
     create(@Body() createStringDto: CreateStringDto) {
-        // Let class-validator handle type and presence errors
+        // Validate that value is actually a string type
+        // console.log('Invalid type for value:', typeof createStringDto.value);
+        if (typeof createStringDto.value !== 'string') {
+            throw new UnprocessableEntityException('Invalid data type for "value" (must be string)');
+        }
         return this.stringsService.create(createStringDto);
     }
 
@@ -37,6 +42,7 @@ export class StringsController {
     @Get()
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
     findAll(@Query() filters: FilterStringsDto) {
+        // console.log('Filters received:', filters);
         return this.stringsService.findAll(filters);
     }
 
@@ -48,7 +54,62 @@ export class StringsController {
         if (!query) {
             throw new BadRequestException('Query parameter "query" is required');
         }
+
+        let parsedFilters: any;
+        try {
+            parsedFilters = this.stringsService.parseNaturalLanguageQuery(query);
+        } catch (error) {
+            throw new BadRequestException('Unable to parse natural language query');
+        }
+
+        // Check for conflicting filters
+        const conflicts = this.detectFilterConflicts(parsedFilters);
+        if (conflicts.length > 0) {
+            throw new UnprocessableEntityException({
+                message: 'Query parsed but resulted in conflicting filters',
+                conflicts: conflicts,
+                parsed_filters: parsedFilters,
+            });
+        }
+
         return this.stringsService.filterByNaturalLanguage(query);
+    }
+
+    private detectFilterConflicts(filters: any): string[] {
+        const conflicts: string[] = [];
+
+        // Check if min_length > max_length
+        if (
+            filters.min_length !== undefined &&
+            filters.max_length !== undefined &&
+            filters.min_length > filters.max_length
+        ) {
+            conflicts.push(
+                `min_length (${filters.min_length}) cannot be greater than max_length (${filters.max_length})`,
+            );
+        }
+
+        // Check if exact length conflicts with min/max
+        if (filters.length !== undefined) {
+            if (
+                filters.min_length !== undefined &&
+                filters.length < filters.min_length
+            ) {
+                conflicts.push(
+                    `Exact length (${filters.length}) conflicts with min_length (${filters.min_length})`,
+                );
+            }
+            if (
+                filters.max_length !== undefined &&
+                filters.length > filters.max_length
+            ) {
+                conflicts.push(
+                    `Exact length (${filters.length}) conflicts with max_length (${filters.max_length})`,
+                );
+            }
+        }
+
+        return conflicts;
     }
 
     /**

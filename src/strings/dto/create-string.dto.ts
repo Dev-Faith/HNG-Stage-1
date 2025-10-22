@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateStringDto {
-    @IsString()
+    // @IsString()
     @IsNotEmpty()
     value: string;
 }

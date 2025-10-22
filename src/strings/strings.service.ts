@@ -134,7 +134,7 @@ export class StringsService {
     /**
      * Parse natural language query and convert to filters
      */
-    private parseNaturalLanguageQuery(query: string): FilterStringsDto {
+    parseNaturalLanguageQuery(query: string): FilterStringsDto {
         const lowerQuery = query.toLowerCase();
         const filters: FilterStringsDto = {};
 
