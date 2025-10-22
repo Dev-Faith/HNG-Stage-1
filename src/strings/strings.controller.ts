@@ -12,6 +12,7 @@ import {
     UsePipes,
     BadRequestException,
     UnprocessableEntityException,
+    NotFoundException,
 } from '@nestjs/common';
 import { StringsService } from './strings.service';
 import { CreateStringDto } from './dto/create-string.dto';
@@ -31,7 +32,7 @@ export class StringsController {
         // Validate that value is actually a string type
         // console.log('Invalid type for value:', typeof createStringDto.value);
         if (typeof createStringDto.value !== 'string') {
-            throw new UnprocessableEntityException('Invalid data type for "value" (must be string)');
+            throw new NotFoundException('Invalid data type for "value" (must be string)');
         }
         return this.stringsService.create(createStringDto);
     }
